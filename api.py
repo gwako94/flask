@@ -56,17 +56,15 @@ def token_required(f):
 def create_user(current_user):
 
 	if not current_user.admin:
-       return jsonify({'message': 'Cannot perform that function!'})
-
-    data = request.get_json()
-
-    hashed_password = generate_password_hash(data['password'], method='sha256')
-
-    new_user = User(public_id=str(uuid.uuid4()), name=data['name'], password=hashed_password, admin=False)
-    db.session.add(new_user)
-    db.session.commit()
-
-    return jsonify({'message' : 'New user created!'})
+	    return jsonify({'message': 'Cannot perform that function!'})
+	    
+	data = request.get_json()
+	hashed_password = generate_password_hash(data['password'], method='sha256')
+	new_user = User(public_id=str(uuid.uuid4()), name=data['name'], password=hashed_password, admin=False)
+	db.session.add(new_user)
+	db.session.commit()
+	
+	return jsonify({'message' : 'New user created!'})
 
 @app.route('/user', methods=['GET'])
 @token_required
@@ -94,20 +92,17 @@ def get_all_users(current_user):
 def get_one_user(current_user, public_id):
 
 	if not current_user.admin:
-       return jsonify({'message': 'Cannot perform that function!'})
-
-    user = User.query.filter_by(public_id=public_id).first()
-
-    if not user:
-        return jsonify({'message' : 'User not found'})
-
-    user_data = {}
-    user_data['public_id'] = user.public_id
-    user_data['name'] = user.name
-    user_data['password'] = user.password
-    user_data['admin'] = user.admin
-
-    return jsonify({'user' : user_data })
+	    return jsonify({'message': 'Cannot perform that function!'})
+	    
+	user = User.query.filter_by(public_id=public_id).first()
+	if not user:
+	    return jsonify({'message' : 'User not found'})
+	user_data = {}
+	user_data['public_id'] = user.public_id
+	user_data['name'] = user.name
+	user_data['password'] = user.password
+	user_data['admin'] = user.admin
+	return jsonify({'user' : user_data })
 
 @app.route('/user/<public_id>', methods=['PUT'])
 @token_required
@@ -160,7 +155,74 @@ def login():
         return jsonify({'token' : token.decode('UTF-8')})
     
     return make_response('Could not verify', 401, {'WWW-Authenticate' : 'Basic realm="Login required!"'})
+    
+"""Todo"""
+
+@app.route('/todo', methods=['GET'])
+@token_required
+def get_all_todos(current_user):
+    todos = Todo.query.all()
+    output = []
+    for todo in todos:
+        todo_data = {}
+        todo_data['id'] = todo.id
+        todo_data['text'] = todo.text
+        todo_data['complete'] = todo.complete
+        output.append(todo_data)
+    
+    return jsonify({'todos': output })
+    
+@app.route('/todo/<todo_id>', methods=['GET'])
+@token_required
+def get_one_todo(current_user, todo_id):
+    todo = Todo.query.filter_by(todo_id=Todo.id, user_id=current_user.id).first()
+    
+    if not todo:
+        return jsonify({'message': 'todo not found'})
+    
+    todo_data = {}
+    todo_data['id'] = todo.id
+    todo_data['text'] = todo.text
+    todo_data['complete'] = todo.complete
+    
+    return jsonify({ 'message': todo_data})
+    
+@app.route('/todo', methods=['POST'])
+@token_required
+def create_todo(current_user):
+    data = request.get_json()
+    new_todo = Todo(text=data['text'], complete=Todo.complete, user_id=current_user.id)
+    db.session.add(new_todo)
+    db.session.commit()
+    
+    return jsonify({'message': 'New todo created!'})
+
+    
+@app.route('/todo/<todo_id>', methods=['PUT'])
+@token_required
+def complete_todo(current_user, todo_id):
+    todo = Todo.query.filter_by(todo_id=Todo.id, user_id=current_user.id).first()
+    
+    if not todo:
+        return jsonify({'message': 'todo not found'})
+    todo.complete = True
+    db.session.complete()
+    
+    return jsonify({'message':'todo has been completed'})
+    
+@app.route('/todo/<todo_id>', methods=['DELETE'])
+@token_required
+def delete_todo(current_user, todo_id):
+    todo = Todo.query.filter_by(todo_id=Todo.id, user_id=current_user.id).first()
+    
+    if not todo:
+        return jsonify({'message': 'todo not found'})
+        
+    db.session.delete(todo)
+    db.session.commit()
+    
+    return jsonify({'message': 'todo has been deleted!'})
 
 if __name__ == ('__main__'):
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=8080, debug=True)
 
