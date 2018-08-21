@@ -175,7 +175,7 @@ def get_all_todos(current_user):
 @app.route('/todo/<todo_id>', methods=['GET'])
 @token_required
 def get_one_todo(current_user, todo_id):
-    todo = Todo.query.filter_by(todo_id=Todo.id, user_id=current_user.id).first()
+    todo = Todo.query.filter_by(id=todo_id, user_id=current_user.id).first()
     
     if not todo:
         return jsonify({'message': 'todo not found'})
@@ -185,13 +185,13 @@ def get_one_todo(current_user, todo_id):
     todo_data['text'] = todo.text
     todo_data['complete'] = todo.complete
     
-    return jsonify({ 'message': todo_data})
+    return jsonify({ 'todo': todo_data})
     
 @app.route('/todo', methods=['POST'])
 @token_required
 def create_todo(current_user):
     data = request.get_json()
-    new_todo = Todo(text=data['text'], complete=Todo.complete, user_id=current_user.id)
+    new_todo = Todo(text=data['text'], complete=False, user_id=current_user.id)
     db.session.add(new_todo)
     db.session.commit()
     
@@ -201,19 +201,20 @@ def create_todo(current_user):
 @app.route('/todo/<todo_id>', methods=['PUT'])
 @token_required
 def complete_todo(current_user, todo_id):
-    todo = Todo.query.filter_by(todo_id=Todo.id, user_id=current_user.id).first()
+    todo = Todo.query.filter_by(id=todo_id, user_id=current_user.id).first()
     
     if not todo:
         return jsonify({'message': 'todo not found'})
+        
     todo.complete = True
-    db.session.complete()
+    db.session.commit()
     
     return jsonify({'message':'todo has been completed'})
     
 @app.route('/todo/<todo_id>', methods=['DELETE'])
 @token_required
 def delete_todo(current_user, todo_id):
-    todo = Todo.query.filter_by(todo_id=Todo.id, user_id=current_user.id).first()
+    todo = Todo.query.filter_by(id=todo_id, user_id=current_user.id).first()
     
     if not todo:
         return jsonify({'message': 'todo not found'})
